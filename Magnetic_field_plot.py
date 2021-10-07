@@ -15,6 +15,7 @@ import time
 
 #global variable tells if we need auto plotting or not
 plot_data = False
+error_data = False
 #global variable that connects to the serial port
 ser = None
 #global variables for plotting the function
@@ -87,14 +88,18 @@ def get_grid():
 
 def plot():
     """ plots the data on the Tk fig/canvas """
-    global fig, canvas, nodata
+    global fig, canvas, nodata, error_data
     #plotting the graph, if we have data
     grid_z = get_grid()
         
     if grid_z is None:
         error_message = "No data: Did you select the serial port?"
-        nodata = tkinter.Label(window, text = error_message) 
-        nodata.grid(row=2, column=0, columnspan=2, padx='5', pady='5', sticky="w") 
+
+        if error_data is False:
+            nodata = tkinter.Label(window, text = error_message) 
+            nodata.grid(row=2, column=0, columnspan=2, padx='5', pady='5', sticky="w") 
+            error_data = not error_data    
+       
         print(error_message)
         return
 
@@ -109,8 +114,9 @@ def plot():
 
 def remove():
     """remove the error message"""
+    global error_data
     nodata.destroy()
-
+    error_data = not error_data    
 
 def loop():
     """checks if we need a plot, and reschedules itself after 200ms"""
