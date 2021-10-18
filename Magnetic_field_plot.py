@@ -26,7 +26,7 @@ new = []
 
 
 def get_COM_list():
-    """Looks how many Prots thre are and makes a list, sets which port to use"""
+    """Looks how many ports there are and makes a list, sets which port to use"""
     find_com = serial.tools.list_ports
     COM = find_com.comports()
     COM_list = []
@@ -53,10 +53,17 @@ def verknupfung(port):
         ser = None
 
 
+def method_interpolate(technique):
+    """Reads the interpolation method."""
+    global interpolate_method
+    interpolate_method = technique
+
+
 def get_grid():
     """ reads data from the serial port (if initialized) and returns a 2D grid"""
-    global ser
+    global ser, interpolate_method
     while True:
+        window.update()
         try:
             z = ser.readline()
             if z != b"":
@@ -65,13 +72,19 @@ def get_grid():
                 z[-1] = z[-1].replace("\r\n", "")
                 z = [float(j) for j in z]
 
+                z[0] = z[0] - 2
+                z[2] = z[2] - 2
+                z[4] = z[4] - 1
+                z[5] = z[5] - 4 
+                z[6] = z[6] - 4
+
                 yses = [0, 2, 4, 1, 3, 0, 2, 4]
                 xses = [3, 4, 3, 2, 2, 1, 0, 1]
-
+               
                 grid_x, grid_y = np.mgrid[0:4:5j, 0:4:5j]
-                grid_z = griddata((xses, yses), z, (grid_x, grid_y), method="linear")
+                grid_z = griddata((xses, yses), z, (grid_x, grid_y), method = interpolate_method)
                 new.clear()
-                return grid_z                
+                return grid_z
 
             else:
                 leg = len(new)
@@ -88,18 +101,17 @@ def get_grid():
 
 def plot():
     """ plots the data on the Tk fig/canvas """
-    global fig, canvas, nodata, error_data
+    global fig, canvas, nodata, error_data, interpolate_method
+
     #plotting the graph, if we have data
-    grid_z = get_grid()
-        
+    grid_z = get_grid()        
     if grid_z is None:
-        error_message = "No data: Did you select the serial port?"
+        error_message = "No data: Did you select everything?"
 
         if error_data is False:
             nodata = tkinter.Label(window, text = error_message) 
-            nodata.grid(row=2, column=0, columnspan=2, padx='5', pady='5', sticky="w") 
+            nodata.grid(row=2, column=1, columnspan=2, padx='5', pady='5', sticky="w") 
             error_data = not error_data    
-       
         print(error_message)
         return
 
@@ -145,7 +157,6 @@ def main():
     window.title("Magnetic field plot")
     #dimensions of the main window
     window.geometry("586x470")
-    window.resizable(width=False, height=False)
 
 
     #chose a Port
@@ -157,6 +168,18 @@ def main():
     question_menu.grid(row=1, column=0, padx=5, pady=5)
     question_menu.config(width = 17)
     question_menu.config(height = 2)
+
+
+    #chose a technique
+    technique = ("nearest", 'linear','cubic')
+    technique_inside = tkinter.StringVar(window)
+    technique_inside.set("Select a technique:")
+    technique_menu = tkinter.OptionMenu(
+        window,technique_inside, *technique, command = method_interpolate
+        )
+    technique_menu.grid(row=2, column=0, padx=5, pady=5)
+    technique_menu.config(width = 17)
+    technique_menu.config(height = 2)
 
 
     #button that displays the plot
@@ -204,6 +227,7 @@ def main():
     #run the gui
     window.after(200, loop)
     window.mainloop()
+
 
 if __name__ == "__main__":
     #execute only if run as a script
